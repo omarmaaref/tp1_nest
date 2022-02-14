@@ -14,11 +14,12 @@ export class TodoController {
     return this.todos;
   }
   @Post()
-  addTodo(@Body() newTodo: Todo): Todo {
+  addTodo(@Body() newTodoData: Todo): Todo {
     let todo = new Todo();
+    // const { name, description} = newTodoData;
     todo.id = uuidv4();
-    todo = { ...todo, ...newTodo };
-    this.todos.push(newTodo);
+    todo = { ...todo, ...newTodoData };
+    this.todos.push(todo);
     return todo;
   }
 }
