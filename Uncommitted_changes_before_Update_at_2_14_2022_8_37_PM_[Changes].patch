@@ -1,0 +1,201 @@
+Index: src/todo/todo.controller.ts
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/todo/todo.controller.ts b/src/todo/todo.controller.ts
+--- a/src/todo/todo.controller.ts	
++++ b/src/todo/todo.controller.ts	
+@@ -1,16 +1,38 @@
+-import { Controller, Get, Req } from "@nestjs/common";
+-import { Todo } from './Model/todo.model';
++import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Req } from "@nestjs/common";
++import { Todo } from "./Model/todo.model";
+ import { Request } from "express";
+-
+-@Controller('todo')
++import { v4 as uuidv4 } from "uuid";
++import { AddTodoDto } from "./DTO/Add.Todo.Dto";
++import { UpdateTodoDto } from "./DTO/update.Todo.Dto";
++import { TodoServiceService } from "../todo-service/todo-service.service";
++@Controller("todo")
+ export class TodoController {
+-  constructor() {
+-    this.todos = [new Todo('1', 'Sport', 'Faire du sport')];
++
++  constructor(private readonly service: TodoServiceService) {}
++
++
++  @Get(":id")
++  getTodo(@Param("id") id: string) {
++    return this.service.getTodo(id);
+   }
+-  todos: Todo[] = [];
++
+   @Get()
+-  getTodos(@Req() request: Request): Todo[] {
+-    // console.log(request);
+-    return this.todos;
++  getTodos(): Todo[] {
++    return this.service.getTodos();
++  }
++
++  @Post()
++  addToDo(@Body() newtodo: AddTodoDto): AddTodoDto {
++    return this.service.addToDo(newtodo);
++  }
++
++  @Delete(":id")
++  delTodo(@Param("id") id: string) {
++    return this.service.delTodo(id);
++  }
++
++  @Patch(':id')
++  updateTodo(@Param("id") id: string, @Body() updatedtodo: UpdateTodoDto) {
++    return this.service.updateTodo(id,updatedtodo);
+   }
+ }
+Index: src/todo/Model/todo.model.ts
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/todo/Model/todo.model.ts b/src/todo/Model/todo.model.ts
+--- a/src/todo/Model/todo.model.ts	
++++ b/src/todo/Model/todo.model.ts	
+@@ -2,7 +2,7 @@
+ 
+ export class Todo {
+   constructor(
+-    public string = '',
++    public id :string = '',
+     public name: string = '',
+     public description: string = '',
+     public createdAt = new Date(),
+Index: package.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/package.json b/package.json
+--- a/package.json	
++++ b/package.json	
+@@ -23,6 +23,7 @@
+   "dependencies": {
+     "@nestjs/common": "^8.0.0",
+     "@nestjs/core": "^8.0.0",
++    "@nestjs/mapped-types": "^1.0.1",
+     "@nestjs/platform-express": "^8.0.0",
+     "reflect-metadata": "^0.1.13",
+     "rimraf": "^3.0.2",
+Index: src/todo-service/todo-service.service.spec.ts
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/todo-service/todo-service.service.spec.ts b/src/todo-service/todo-service.service.spec.ts
+new file mode 100644
+--- /dev/null	
++++ b/src/todo-service/todo-service.service.spec.ts	
+@@ -0,0 +1,18 @@
++import { Test, TestingModule } from '@nestjs/testing';
++import { TodoServiceService } from './todo-service.service';
++
++describe('TodoServiceService', () => {
++  let service: TodoServiceService;
++
++  beforeEach(async () => {
++    const module: TestingModule = await Test.createTestingModule({
++      providers: [TodoServiceService],
++    }).compile();
++
++    service = module.get<TodoServiceService>(TodoServiceService);
++  });
++
++  it('should be defined', () => {
++    expect(service).toBeDefined();
++  });
++});
+Index: src/todo-service/todo-service.service.ts
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/todo-service/todo-service.service.ts b/src/todo-service/todo-service.service.ts
+new file mode 100644
+--- /dev/null	
++++ b/src/todo-service/todo-service.service.ts	
+@@ -0,0 +1,39 @@
++import { Injectable, NotFoundException } from "@nestjs/common";
++
++import { v4 as uuidv4 } from "uuid";
++import { Todo } from "../todo/Model/todo.model";
++import { AddTodoDto } from "../todo/DTO/Add.Todo.Dto";
++import { UpdateTodoDto } from "../todo/DTO/update.Todo.Dto";
++
++
++
++@Injectable()
++export class TodoServiceService {
++  todos: Todo[] = [];
++  getTodo(id: string){
++    const todo = this.todos.find(e => e.id == id);
++    if (todo == null) throw new NotFoundException("todo not found");
++    return todo; }
++
++  getTodos(): Todo[] {
++    return this.todos;
++  }
++  addToDo(newtodo: AddTodoDto): AddTodoDto {
++    let todo = new Todo();
++    const myuuid = uuidv4();
++    todo.id = myuuid;
++    todo = { ...todo, ...newtodo };
++    this.todos.push(todo);
++    return todo;
++  }
++  delTodo(id: string) {
++    this.todos = this.todos.filter(e => e.id != id);  }
++
++  updateTodo(id: string, updatedtodo: UpdateTodoDto) {
++    let todo=this.getTodo(id);
++    todo =  { ...todo, ...updatedtodo };
++    this.delTodo(id);
++    this.todos.push(todo)
++    return todo;
++  }
++}
+Index: src/todo/DTO/Add.Todo.Dto.ts
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/todo/DTO/Add.Todo.Dto.ts b/src/todo/DTO/Add.Todo.Dto.ts
+new file mode 100644
+--- /dev/null	
++++ b/src/todo/DTO/Add.Todo.Dto.ts	
+@@ -0,0 +1,6 @@
++import { TodoStatusEnum } from "../enums/todo-status.enum";
++
++export class AddTodoDto{
++  name: string ;
++  description: string;
++}
+\ No newline at end of file
+Index: src/todo/DTO/update.Todo.Dto.ts
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/todo/DTO/update.Todo.Dto.ts b/src/todo/DTO/update.Todo.Dto.ts
+new file mode 100644
+--- /dev/null	
++++ b/src/todo/DTO/update.Todo.Dto.ts	
+@@ -0,0 +1,7 @@
++import { OmitType, PartialType } from '@nestjs/mapped-types';
++import { TodoStatusEnum } from "../enums/todo-status.enum";
++import { AddTodoDto } from "./Add.Todo.Dto";
++
++export class UpdateTodoDto extends PartialType(AddTodoDto) {
++  status: TodoStatusEnum;
++}
